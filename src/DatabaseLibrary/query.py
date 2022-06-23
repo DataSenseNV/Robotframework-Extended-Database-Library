@@ -248,7 +248,7 @@ class Query(object):
         Using optional `sansTran` to run command without an explicit transaction commit or rollback:
         | Execute Sql Script | ${EXECDIR}${/}resources${/}DDL-setup.sql | True |
         """
-        sqlScriptFile = open(sqlScriptFileName ,encoding='UTF-8')
+        sqlScriptFile = open(sqlScriptFileName)
 
         cur = None
         try:
@@ -369,3 +369,58 @@ class Query(object):
 
     def __execute_sql(self, cur, sqlStatement):
         return cur.execute(sqlStatement)
+
+# ADDED FUNCTIONALITY BELOW
+
+    def compare_tables(self, schema_name_a, table_name_a, schema_name_b, table_name_b):
+        query = f'select \'select * from {schema_name_a}.{table_name_a} full outer join {schema_name_b}.{table_name_b} on \' || listagg(\'{table_name_a}.\' || column_name || \' = {table_name_b}.\' || column_name, \' and \' ) within group (order by table_name) || \' where {table_name_a}.\' || any_value(column_name) || \' is null or {table_name_b}.\' || any_value(column_name) || \' is null;\' from information_schema.columns where table_schema = \'RESULT\' and table_name = \'{table_name_b}\' group by table_name;'
+        result = self.query(query)
+
+        return self.row_count(result[0][0])
+
+    def open_sql(self, sqlScriptFileName, sansTran=False):
+        print(open(sqlScriptFileName).read())
+        
+        return open(sqlScriptFileName).read()
+
+    def count_object_rows_table(self, schema_name, table_name):
+        query = f'SELECT COUNT(*) FROM {schema_name}.{table_name}'
+        result = self.query(query)
+        
+        return result
+    
+    def count_object_rows_table_argument(self, schema_name, table_name, argument):
+        query = f'SELECT COUNT(*) FROM {schema_name}.{table_name} WHERE {argument}'
+        result = self.query(query)
+
+        return result
+
+    def count_unique_rows_table(self, schema_name, table_name, unique_key):
+        query = f'SELECT COUNT(DISTINCT {unique_key}) FROM {schema_name}.{table_name}'
+        result = self.query(query)
+
+        return result
+
+    def count_unique_rows_table_argument(self, schema_name, table_name, unique_key, argument):
+        query = f'SELECT COUNT(DISTINCT {unique_key}) FROM {schema_name}.{table_name} WHERE {argument}'
+        result = self.query(query)
+
+        return result
+
+    def count_found_rows_table(self, schema_name, table_name, unique_key, foreign_table_name, foreign_key):
+        query = f'SELECT COUNT(DISTINCT {foreign_key}) FROM {schema_name}.{table_name} LEFT OUTER JOIN {foreign_table_name} ON {foreign_key} = {unique_key}'
+        result = self.query(query)
+        
+        return result
+
+    def count_found_rows_table_argument(self, schema_name, table_name, unique_key, foreign_table_name, foreign_key, argument):
+        query = f'SELECT COUNT(DISTINCT {foreign_key}) FROM {schema_name}.{table_name} LEFT OUTER JOIN {foreign_table_name} ON {foreign_key} = {unique_key} AND {argument}'
+        result = self.query(query)
+        
+        return result
+    
+    def count_found_rows_table_withClause(self, schema_name, table_name, unique_key, foreign_table_name, foreign_key):
+        query = f'WITH rel AS (SELECT {unique_key} FROM {schema_name}.{table_name}) SELECT COUNT(DISTINCT {foreign_key}) FROM rel LEFT OUTER JOIN {foreign_table_name} ON {foreign_key} = {unique_key}'
+        result = self.query(query)
+        
+        return result
